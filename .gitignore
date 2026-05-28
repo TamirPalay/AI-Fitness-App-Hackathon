@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data files (generated, not committed)
+data/raw/
+data/processed/
+
+# IDE / OS
+.vscode/
+.DS_Store
