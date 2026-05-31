@@ -82,6 +82,44 @@ def last_7_days(user_id: str, df_logs: pd.DataFrame) -> pd.DataFrame:
     logs = df_logs[df_logs["user_id"] == user_id].copy()
     logs = logs.sort_values("date").tail(7)
     return logs
+
+# Functional tools — lambda, map, filter, reduce
+
+from functools import reduce
+
+def label_activity_level(steps: int) -> str:
+    # Lambda to categorise a single day's steps into an activity level
+    label = (lambda s:
+        "very active"    if s >= 10000 else
+        "active"         if s >= 7000  else
+        "lightly active" if s >= 4000  else
+        "sedentary"
+    )(steps)
+    return label
+
+
+def add_activity_labels(df_logs: pd.DataFrame) -> pd.DataFrame:
+    # Map label_activity_level across every row's steps column
+    df = df_logs.copy()
+    df["activity_level"] = list(map(label_activity_level, df["steps"]))
+    return df
+
+
+def filter_active_days(df_logs: pd.DataFrame) -> pd.DataFrame:
+    # Filter out rest days and sedentary days, keeping only meaningful activity
+    active = list(filter(
+        lambda row: row["workout_type"] != "Rest" and row["steps"] >= 4000,
+        df_logs.to_dict("records")
+    ))
+    return pd.DataFrame(active)
+
+
+def total_calories_burned(df_logs: pd.DataFrame) -> int:
+    # Reduce to calculate total calories burned across all logs
+    return reduce(
+        lambda acc, cal: acc + cal,
+        df_logs["calories_burned"].tolist()
+    )
     
 def main():
     df_users, df_logs = load_data()
@@ -104,5 +142,16 @@ def main():
     recent = last_7_days("u_0001", df_logs)
     print("\nLast 7 days:")
     print(recent[["date", "workout_type", "steps", "calories_burned", "workout_rating"]].to_string(index=False))
+    
+    print("\n-- Functional Tools --")
+    labelled = add_activity_labels(df_logs)
+    print(f"  Activity level counts:\n{labelled['activity_level'].value_counts()}")
+
+    active_days = filter_active_days(df_logs)
+    print(f"\n  Active days only: {len(active_days)} of {len(df_logs)} total logs")
+
+    total_cal = total_calories_burned(df_logs)
+    print(f"\n  Total calories burned across all users: {total_cal:,}")
+    
 if __name__ == "__main__":
     main()
