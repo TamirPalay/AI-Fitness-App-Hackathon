@@ -45,7 +45,15 @@ INJURY_NOTES = {
 
 WORKOUT_TYPES = ["Yoga", "HIIT", "Running", "Strength", "Cycling", "Swimming", "Rest"]
 
-
+CALORIE_MULTIPLIERS = {
+    "HIIT":     1.4,
+    "Running":  1.2,
+    "Cycling":  1.1,
+    "Swimming": 1.1,
+    "Strength": 1.0,
+    "Yoga":     0.7,
+    "Rest":     0.0
+}
 # Helper functions
 
 def generate_equipment():
@@ -98,7 +106,8 @@ def generate_daily_logs(num_days: int, fitness_level: str) -> list:
             duration = 0
         else:
             steps = max(500, int(random.gauss(base_steps[fitness_level], 1500)))
-            calories = max(50, int(random.gauss(base_calories[fitness_level], 80)))
+            multiplier = CALORIE_MULTIPLIERS.get(workout, 1.0)
+            calories = max(50, int(random.gauss(base_calories[fitness_level], 80) * multiplier))
             duration = random.randint(20, 75)
 
         logs.append({
