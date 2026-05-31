@@ -27,7 +27,7 @@ def plot_calories_by_workout(df_logs: pd.DataFrame):
     )
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    sns.barplot(data=avg_calories, x="workout_type", y="calories_burned", ax=ax, palette="muted")
+    sns.barplot(data=avg_calories, x="workout_type", y="calories_burned", ax=ax, hue="workout_type", palette="muted", legend=False)
     ax.set_title("Average Calories Burned by Workout Type")
     ax.set_xlabel("Workout Type")
     ax.set_ylabel("Avg Calories Burned")
@@ -41,7 +41,7 @@ def plot_workout_frequency(df_logs: pd.DataFrame):
     counts.columns = ["workout_type", "count"]
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    sns.barplot(data=counts, x="workout_type", y="count", ax=ax, palette="muted")
+    sns.barplot(data=counts, x="workout_type", y="count", ax=ax, hue="workout_type", palette="muted", legend=False)
     ax.set_title("Workout Frequency Across All Users")
     ax.set_xlabel("Workout Type")
     ax.set_ylabel("Total Sessions")
@@ -64,7 +64,7 @@ def plot_steps_over_time(df_logs: pd.DataFrame, user_name: str):
 
 def plot_calories_over_time(df_logs: pd.DataFrame, user_name: str):
     fig, ax = plt.subplots(figsize=(10, 4))
-    sns.lineplot(data=df_logs, x="date", y="calories_burned", ax=ax, color="coral")
+    sns.barplot(data=df_logs, x="date", y="calories_burned", ax=ax, hue="date", palette="muted", legend=False)
     ax.set_title(f"Calories Burned Over Time — {user_name}")
     ax.set_xlabel("Date")
     ax.set_ylabel("Calories Burned")
@@ -79,7 +79,7 @@ def plot_user_workout_frequency(df_logs: pd.DataFrame, user_name: str):
     counts.columns = ["workout_type", "count"]
 
     fig, ax = plt.subplots(figsize=(8, 4))
-    sns.barplot(data=counts, x="workout_type", y="count", ax=ax, palette="muted")
+    sns.barplot(data=counts, x="workout_type", y="count", ax=ax, hue="workout_type", palette="muted", legend=False)
     ax.set_title(f"Workout Frequency — {user_name}")
     ax.set_xlabel("Workout Type")
     ax.set_ylabel("Sessions")
