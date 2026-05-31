@@ -35,7 +35,9 @@ def build_users_df(users: list) -> pd.DataFrame:
             "fitness_level": user["fitness_level"],
             "equipment":     user["equipment"],  # kept as list for now
             "has_injuries":  len(user["injuries"]) > 0,
-            "injury_count":  len(user["injuries"])
+            "injury_count":  len(user["injuries"]),
+            "preferred_workouts": user["preferred_workouts"],
+            "disliked_exercises": user["disliked_exercises"]
         })
     return pd.DataFrame(rows)
 
