@@ -14,3 +14,5 @@ data/processed/
 # IDE / OS
 .vscode/
 .DS_Store
+
+.env
