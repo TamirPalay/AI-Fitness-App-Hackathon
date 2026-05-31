@@ -74,6 +74,12 @@ def generate_injuries():
         })
     return injuries
 
+def generate_preferred_workouts():
+    # exclude Rest — you can't prefer doing nothing
+    options = [w for w in WORKOUT_TYPES if w != "Rest"]
+    num = random.randint(1, 3)
+    return random.sample(options, num)
+
 
 def generate_daily_logs(num_days: int, fitness_level: str) -> list:
     base_steps = {"beginner": 4000, "intermediate": 7000, "advanced": 10000}
@@ -121,6 +127,8 @@ def generate_user(user_id: int) -> dict:
         "fitness_level": fitness_level,
         "equipment": generate_equipment(),
         "injuries": generate_injuries(),
+        "preferred_workouts": generate_preferred_workouts(),
+        "disliked_exercises": [],#Populated based on feedback to LLM
         "daily_logs": generate_daily_logs(num_days, fitness_level)
     }
 
