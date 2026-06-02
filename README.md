@@ -10,9 +10,9 @@ This project was developed as part of the Developers Institute GenAI & Machine L
 
 The app simulates 500 user profiles with realistic fitness data and provides:
 - A global dashboard showing aggregate stats across all users
-- Individual user dashboards with personal progress charts
-- AI-generated daily workout suggestions via a Groq LLM
-- A feedback loop where users accept or reject exercises and regenerate replacements
+- Individual user dashboards with personal progress charts and a live muscle group diagram
+- AI-generated daily workout suggestions via a Groq LLM, personalised by equipment, injuries, and past feedback
+- A feedback loop where users like or reject individual exercises — preferences are persisted and used in future recommendations
 - Statistical analysis of fitness patterns using SciPy
 
 ---
@@ -51,6 +51,7 @@ AI-Fitness-App-Hackathon/
 │   ├── models.py                   ← User class (OOP)
 │   ├── stats_analysis.py           ← ANOVA, linear regression, paired t-test
 │   ├── visualizations.py           ← all Matplotlib/Seaborn chart functions
+│   ├── muscle_map.py               ← front/back body diagram with muscle highlights
 │   ├── workout_generator.py        ← Groq LLM integration and saved workouts
 │   └── app.py                      ← Streamlit dashboard
 ├── .env                            ← API key (not committed)
@@ -97,25 +98,32 @@ streamlit run src/app.py
 ## Features
 
 ### Global Dashboard
-- Average daily steps, calories burned, and workout duration across all 500 users
-- Bar charts showing calorie burn and workout frequency by workout type
+- Aggregate metrics across all 500 users: avg daily steps, calories, workout duration, and most popular workout type
+- Bar charts showing average calorie burn and session frequency by workout type
 
 ### User Dashboard
-- Select any user by number (1–500)
-- Profile summary including goal, fitness level, equipment, and injuries
-- Personal activity metrics and progress charts
-- Steps and calories over time (line plots)
-- Personal workout frequency (bar chart)
+- Select any user by number (1–500) with a personalised sidebar summary
+- Profile overview: goal, fitness level, equipment, preferred workouts, and injury details
+- Personal activity metrics and progress charts (steps over time, calories over time, workout frequency)
+- Injury warnings displayed with body part, severity, and coaching notes
 
 ### AI Workout Generation
-- Sends a user's profile and last 7 days of activity to the Groq LLM
-- Returns a structured JSON workout plan (4–6 exercises with sets, reps, equipment, and coaching notes)
-- User can thumbs down individual exercises and regenerate replacements
-- Accepted workouts can be saved and revisited
+- Sends the user's profile and last 7 days of activity to Groq (LLaMA 3.3 70B)
+- Returns a structured JSON workout plan with 4–6 exercises including sets, reps, equipment, and coaching notes
+- Each exercise is rendered as a colour-coded card (colour reflects muscle group)
+- **Like (❤️)** or **Reject (👎)** individual exercises — rejected exercises are swapped out via a targeted LLM call that only replaces the rejected slots, keeping accepted exercises intact
+- Liked and disliked exercises are persisted to the user profile on save and fed back into future LLM prompts
+- Saved workouts can be revisited from the dashboard
+
+### Muscle Group Diagram
+- Front and back body silhouette rendered alongside each workout
+- Active muscle groups highlighted in their card colour
+- Primary muscle groups shown in full colour, secondary groups in a lighter shade
+- Inactive muscle groups displayed in neutral grey
 
 ### Statistical Analysis (see notebook)
 - **ANOVA:** Confirms significant difference in calorie burn across workout types (F=847.82, p≈0.0)
-- **Linear Regression:** Models step trends and predicts the next 7 days of activity
+- **Linear Regression:** Models a user's step trend and predicts the next 7 days of activity
 - **Paired T-Test:** Tests whether workout intensity affects user satisfaction ratings
 
 ---
@@ -142,6 +150,7 @@ Each user profile contains:
     }
   ],
   "preferred_workouts": ["HIIT", "Strength"],
+  "liked_exercises": [],
   "disliked_exercises": [],
   "daily_logs": [
     {
@@ -161,9 +170,9 @@ Each user profile contains:
 ## Known Limitations
 
 - **Simulated data only.** All user profiles and activity logs are generated. Real-world data would produce more meaningful statistical results.
-- **`disliked_exercises` is not yet persisted.** The field exists in the schema and the UI captures rejections, but rejected exercises are not yet written back to the user profile after each session.
-- **Ratings are randomly generated.** The paired t-test result is limited by this — a real preference signal would emerge from actual user feedback over time.
-- **No authentication.** Users are selected by number, not by login. This is intentional for a prototype with fake data.
+- **Ratings are randomly generated.** The paired t-test result is limited by this — a real preference signal will emerge as actual user feedback accumulates through the like/reject system.
+- **No authentication.** Users are selected by number, not by login. This is intentional for a prototype with simulated data.
+- **Calorie values are not tied to body weight or age.** A production model would factor in BMR and user biometrics for more accurate estimates.
 
 ---
 
@@ -171,11 +180,11 @@ Each user profile contains:
 
 This project is the foundation for a full AI fitness platform. Planned next steps:
 
-- **ML exercise substitution model** — replace the LLM with a trained model that learns exercise equivalences based on equipment, injuries, and user feedback
-- **Persist user feedback** — write accepted/rejected exercises back to user profiles to build a real training dataset
+- **ML exercise substitution model** — replace the LLM with a trained model that learns exercise equivalences based on equipment, injuries, and accumulated like/dislike feedback
 - **Real user data** — replace the simulator with actual input forms and a database backend
 - **Exercise library** — a structured database of exercises tagged by muscle group, equipment, and injury contraindications
 - **Progress tracking** — detect plateaus, celebrate milestones, and adapt workout difficulty over time
+- **BMI and fitness scoring** — derive additional user metrics from height, weight, and activity data for richer personalisation
 
 ---
 
