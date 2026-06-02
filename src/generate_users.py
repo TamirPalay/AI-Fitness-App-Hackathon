@@ -137,7 +137,8 @@ def generate_user(user_id: int) -> dict:
         "equipment": generate_equipment(),
         "injuries": generate_injuries(),
         "preferred_workouts": generate_preferred_workouts(),
-        "disliked_exercises": [],#Populated based on feedback to LLM
+        "disliked_exercises": [],#Populated based on feedback to LLM,
+        "liked_exercises": [],   #Populated based on feedback to LLM,
         "daily_logs": generate_daily_logs(num_days, fitness_level)
     }
 

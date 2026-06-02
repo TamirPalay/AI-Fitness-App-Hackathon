@@ -52,7 +52,7 @@ def plot_workout_frequency(df_logs: pd.DataFrame):
 # User specific charts
 
 def plot_steps_over_time(df_logs: pd.DataFrame, user_name: str):
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, ax = plt.subplots(figsize=(6, 3.5))
     sns.lineplot(data=df_logs, x="date", y="steps", ax=ax, color="steelblue")
     ax.set_title(f"Daily Steps Over Time — {user_name}")
     ax.set_xlabel("Date")
@@ -63,7 +63,7 @@ def plot_steps_over_time(df_logs: pd.DataFrame, user_name: str):
 
 
 def plot_calories_over_time(df_logs: pd.DataFrame, user_name: str):
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, ax = plt.subplots(figsize=(6, 3.5))
     sns.barplot(data=df_logs, x="date", y="calories_burned", ax=ax, hue="date", palette="muted", legend=False)
     ax.set_title(f"Calories Burned Over Time — {user_name}")
     ax.set_xlabel("Date")
