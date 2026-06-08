@@ -27,7 +27,7 @@ from workout_generator import (
 from muscle_map import plot_muscle_map
 
 
-# Color palette — shared across cards and muscle map
+# Color palette
 
 ACCENT = "#0e7490"
 
@@ -44,6 +44,30 @@ MUSCLE_COLORS = {
 }
 
 
+# Helpers
+
+def truncate(text: str, limit: int = 72) -> str:
+    return text[:limit] + "…" if len(text) > limit else text
+def hex_lighten(hex_color: str, factor: float = 0.88) -> str:
+    r = int(hex_color[1:3], 16)
+    g = int(hex_color[3:5], 16)
+    b = int(hex_color[5:7], 16)
+    r = int(r + (255 - r) * factor)
+    g = int(g + (255 - g) * factor)
+    b = int(b + (255 - b) * factor)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+# Cycling palette drawn from MUSCLE_COLORS — same colours as the cards
+PILL_COLORS = [
+    "#ef4444",  # chest — red
+    "#3b82f6",  # back — blue
+    "#22c55e",  # legs — green
+    "#f97316",  # shoulders — orange
+    "#a855f7",  # arms — purple
+    "#14b8a6",  # core — teal
+    "#eab308",  # cardio — yellow
+]
+
 # Global CSS
 
 def inject_css():
@@ -54,7 +78,6 @@ def inject_css():
             font-family: 'Segoe UI', sans-serif;
         }
 
-        /* Styled metric cards */
         div[data-testid="metric-container"] {
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -63,7 +86,6 @@ def inject_css():
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
 
-        /* Primary action buttons */
         div[data-testid="stButton"] > button[kind="primary"] {
             background-color: #0e7490;
             border: none;
@@ -76,18 +98,15 @@ def inject_css():
             background-color: #0c6480;
         }
 
-        /* All buttons */
         div[data-testid="stButton"] > button {
             border-radius: 8px;
             font-size: 0.9rem;
         }
 
-        /* Sidebar */
         section[data-testid="stSidebar"] {
             background-color: #f1f5f9;
         }
 
-        /* Exercise card coloured header */
         .exercise-card-header {
             padding: 10px 12px 8px 12px;
             border-radius: 10px 10px 0 0;
@@ -113,7 +132,6 @@ def inject_css():
             letter-spacing: 0.5px;
         }
 
-        /* Workout summary banner */
         .workout-banner {
             background: linear-gradient(135deg, #0e7490, #0891b2);
             color: white;
@@ -132,6 +150,14 @@ def inject_css():
             margin: 0;
             font-size: 0.9rem;
             opacity: 0.85;
+        }
+
+        /* Equalise exercise card heights in each row */
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         </style>
@@ -154,7 +180,6 @@ inject_css()
 @st.cache_data
 def get_data():
     df_users, df_logs = load_data()
-    # CSV serialises lists as strings — convert back
     df_users["equipment"]          = df_users["equipment"].apply(ast.literal_eval)
     df_users["preferred_workouts"] = df_users["preferred_workouts"].apply(ast.literal_eval)
     return df_users, df_logs
@@ -178,7 +203,6 @@ if page == "👤 User Dashboard":
     )
     user_id = f"u_{user_num:04d}"
 
-    # Show personalised summary in sidebar once a user is selected
     try:
         sidebar_stats = user_summary(user_id, df_users, df_logs)
         st.sidebar.divider()
@@ -226,7 +250,7 @@ elif page == "👤 User Dashboard":
     st.caption(f"User {user_id}  ·  {stats['goal'].replace('_', ' ').title()}  ·  {stats['fitness_level'].title()}")
     st.divider()
 
-    # Profile metrics
+    # Profile
     st.subheader("Profile")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("🎂 Age",           stats["age"])
@@ -237,13 +261,11 @@ elif page == "👤 User Dashboard":
     col_left, col_right = st.columns(2)
     with col_left:
         st.markdown("**🏋️ Equipment**")
-        equipment_list = [e.replace("_", " ").title() for e in stats["equipment"]]
-        st.write(", ".join(equipment_list))
+        st.write(", ".join([e.replace("_", " ").title() for e in stats["equipment"]]))
     with col_right:
         st.markdown("**❤️ Preferred Workouts**")
         st.write(", ".join(stats["preferred_workouts"]))
 
-    # Injury details — pulled directly from users.json for full detail
     if injuries:
         st.warning("⚠️ This user has recorded injuries — the workout generator will account for these.")
         for injury in injuries:
@@ -253,7 +275,7 @@ elif page == "👤 User Dashboard":
 
     st.divider()
 
-    # Activity summary metrics
+    # Activity summary
     st.subheader("📊 Activity Summary")
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("🚶 Avg Daily Steps",      f"{stats['avg_daily_steps']:,}")
@@ -263,7 +285,7 @@ elif page == "👤 User Dashboard":
 
     st.divider()
 
-    # Charts — steps and calories side by side, frequency centred below
+    # Charts
     st.subheader("📈 Progress Over Time")
 
     chart_col1, chart_col2 = st.columns(2)
@@ -278,14 +300,10 @@ elif page == "👤 User Dashboard":
 
     st.divider()
 
-    # Workout suggestion section
+    # Workout section
     st.subheader("⚡ Today's Workout")
 
-    # Session state:
-    # workout      — current generated workout dict
-    # rejected     — exercises rejected in this round (cleared after regenerate)
-    # all_rejected — all rejections this session (persisted to users.json on save)
-    # all_liked    — all likes this session (persisted to users.json on save)
+    # Session state
     if "workout" not in st.session_state:
         st.session_state.workout      = None
     if "rejected" not in st.session_state:
@@ -294,80 +312,169 @@ elif page == "👤 User Dashboard":
         st.session_state.all_rejected = []
     if "all_liked" not in st.session_state:
         st.session_state.all_liked    = []
+    if "pinned" not in st.session_state:
+        st.session_state.pinned       = []
+    if "selected_saved" not in st.session_state:
+        st.session_state.selected_saved = None
 
-    # Saved workouts toggle
+    # Saved workouts — displayed as compact gradient cards
     saved = get_user_saved_workouts(user_id)
     if saved:
-        st.markdown(f"💾 You have **{len(saved)}** saved workout(s).")
-        view_saved = st.toggle("View a saved workout instead")
+        with st.expander(f"💾  {len(saved)} saved workout(s) — click to browse"):
+            st.caption("Your previously saved workouts. Select one to load it.")
+            st.divider()
 
-        if view_saved:
-            saved_labels     = [f"{i+1}. {w['workout_summary']}" for i, w in enumerate(saved)]
-            selected         = st.selectbox("Select a saved workout", saved_labels)
-            selected_index   = saved_labels.index(selected)
-            selected_workout = saved[selected_index]
+            # Show up to 6 saved workouts as cards, 3 per row
+            card_cols = st.columns(3)
+            for i, w in enumerate(saved):
+                with card_cols[i % 3]:
+                    ex_count = len(w["exercises"])
+                    st.markdown(f"""
+                        <div style="
+                            background: linear-gradient(135deg, #0f172a, #1e3a5f);
+                            color: white;
+                            padding: 14px 16px;
+                            border-radius: 10px;
+                            margin-bottom: 6px;
+                        ">
+                            <div style="font-size:0.65rem; letter-spacing:1px;
+                                        opacity:0.6; margin-bottom:6px">
+                                WORKOUT {i + 1}
+                            </div>
+                            <div style="font-size:0.82rem; font-weight:600;
+                                        line-height:1.35; margin-bottom:8px">
+                                {truncate(w['workout_summary'], 65)}
+                            </div>
+                            <div style="font-size:0.72rem; opacity:0.65">
+                                {ex_count} exercises
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
 
-            st.markdown(f"""
-                <div class="workout-banner">
-                    <h3>💾 {selected_workout['workout_summary']}</h3>
-                    <p>Saved workout</p>
-                </div>
-            """, unsafe_allow_html=True)
+                    if st.button("Load workout →", key=f"load_{i}", use_container_width=True):
+                        st.session_state.selected_saved = i
 
-            # Muscle map for saved workout
-            map_col, cards_col = st.columns([1, 3])
-            with map_col:
-                st.pyplot(plot_muscle_map(selected_workout["exercises"], MUSCLE_COLORS))
+            # Render selected saved workout below the cards
+            if st.session_state.selected_saved is not None:
+                sel = saved[st.session_state.selected_saved]
+                st.divider()
+                st.markdown(f"""
+                    <div class="workout-banner">
+                        <h3>💾 {sel['workout_summary']}</h3>
+                        <p>Saved workout {st.session_state.selected_saved + 1}</p>
+                    </div>
+                """, unsafe_allow_html=True)
 
-            with cards_col:
-                cols = st.columns(3)
-                for i, ex in enumerate(selected_workout["exercises"]):
-                    color = MUSCLE_COLORS.get(ex["muscle_group"].lower(), ACCENT)
-                    with cols[i % 3]:
-                        with st.container(border=True):
-                            st.markdown(f"""
-                                <div class="exercise-card-header" style="background:{color}">
-                                    <p class="exercise-name">{ex['name']}</p>
-                                    <span class="muscle-badge">{ex['muscle_group']}</span>
-                                </div>
-                            """, unsafe_allow_html=True)
-                            st.write(f"**{ex['sets']} sets × {ex['reps']} reps**")
-                            st.caption(f"🏋️ {ex['equipment'].replace('_', ' ').title()}")
-                            st.caption(f"💡 {ex['notes']}")
-            st.stop()
+                map_col, cards_col = st.columns([1, 3])
+                with map_col:
+                    st.pyplot(plot_muscle_map(sel["exercises"], MUSCLE_COLORS))
+                with cards_col:
+                    cols = st.columns(3)
+                    for i, ex in enumerate(sel["exercises"]):
+                        color = MUSCLE_COLORS.get(ex["muscle_group"].lower(), ACCENT)
+                        with cols[i % 3]:
+                            with st.container(border=True):
+                                st.markdown(f"""
+                                    <div class="exercise-card-header" style="background:{color}">
+                                        <p class="exercise-name">{ex['name']}</p>
+                                        <span class="muscle-badge">{ex['muscle_group']}</span>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                                st.write(f"**{ex['sets']} sets × {ex['reps']} reps**")
+                                st.caption(f"🏋️ {ex['equipment'].replace('_', ' ').title()}")
+                                st.caption(f"💡 {truncate(ex['notes'])}")
 
-    # Feedback history expanders
+    # Liked exercises — pin up to 4 before generating
+    liked_history = get_user_liked_exercises(user_id)
+    if liked_history:
+        pinned_count   = len(st.session_state.pinned)
+        expander_label = (
+            f"❤️  {len(liked_history)} liked exercise(s)  ·  {pinned_count} pinned"
+            if pinned_count > 0
+            else f"❤️  {len(liked_history)} liked exercise(s)  ·  pin to include in next workout"
+        )
+        with st.expander(expander_label):
+            if pinned_count >= 4:
+                st.info(
+                    "📌 **4 exercises pinned.** Great — train what you love. "
+                    "Remember though: the best results come from a balanced plan. "
+                    "The AI will build the rest of the workout around your picks."
+                )
+            else:
+                st.caption(f"Pin up to 4 exercises to guarantee them in your next workout. "
+                           f"{4 - pinned_count} slot(s) remaining.")
+
+            # 4-column pill grid — teal if pinned, light if not
+            cols = st.columns(4)
+            for i, ex_name in enumerate(liked_history):
+                is_pinned = ex_name in st.session_state.pinned
+                color     = PILL_COLORS[i % len(PILL_COLORS)]
+                light_bg  = hex_lighten(color)
+
+                if is_pinned:
+                    bg, border, text, icon = color, color, "white", "📌 "
+                else:
+                    bg, border, text, icon = light_bg, color, color, ""
+
+                with cols[i % 4]:
+                    st.markdown(f"""
+                        <div style="
+                            background:{bg};
+                            border:2px solid {border};
+                            color:{text};
+                            padding:8px 10px;
+                            border-radius:8px;
+                            font-size:0.75rem;
+                            font-weight:700;
+                            text-align:center;
+                            min-height:44px;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            margin-bottom:4px;
+                        ">{icon}{ex_name}</div>
+                    """, unsafe_allow_html=True)
+
+                    if is_pinned:
+                        if st.button("Unpin", key=f"pin_{ex_name}", use_container_width=True):
+                            st.session_state.pinned.remove(ex_name)
+                            st.rerun()
+                    elif pinned_count < 4:
+                        if st.button("Pin", key=f"pin_{ex_name}", use_container_width=True):
+                            st.session_state.pinned.append(ex_name)
+                            st.rerun()
+                    else:
+                        st.button("Pin", key=f"pin_{ex_name}",
+                                  disabled=True, use_container_width=True)
+
+    # Disliked exercises — minimal reference
     disliked = stats.get("disliked_exercises", [])
     if isinstance(disliked, str):
         disliked = ast.literal_eval(disliked)
-    liked_history = get_user_liked_exercises(user_id)
+    if disliked:
+        with st.expander(f"🚫  {len(disliked)} disliked exercise(s)"):
+            st.write(", ".join(disliked))
 
-    feedback_col1, feedback_col2 = st.columns(2)
-    with feedback_col1:
-        if disliked:
-            with st.expander(f"🚫 {len(disliked)} previously disliked exercise(s)"):
-                st.write(", ".join(disliked))
-    with feedback_col2:
-        if liked_history:
-            with st.expander(f"❤️ {len(liked_history)} exercise(s) you enjoy"):
-                st.write(", ".join(liked_history))
-
-    # Generate button — centred
+    # Generate button
     col_left, col_mid, col_right = st.columns([1, 2, 1])
     with col_mid:
         if st.button("⚡ Generate Today's Workout", type="primary", use_container_width=True):
             with st.spinner("Building your personalised workout..."):
-                st.session_state.workout      = generate_workout(stats, recent)
-                st.session_state.rejected     = []
-                st.session_state.all_rejected = []
-                st.session_state.all_liked    = []
+                st.session_state.workout = generate_workout(
+                    stats, recent,
+                    pinned_exercises=st.session_state.pinned if st.session_state.pinned else None
+                )
+                st.session_state.rejected       = []
+                st.session_state.all_rejected   = []
+                st.session_state.all_liked      = []
+                st.session_state.pinned         = []
+                st.session_state.selected_saved = None
 
     if st.session_state.workout:
-        workout = st.session_state.workout
-
-        # Workout summary banner
+        workout       = st.session_state.workout
         num_exercises = len(workout["exercises"])
         est_duration  = num_exercises * 10
+
         st.markdown(f"""
             <div class="workout-banner">
                 <h3>🏋️ {workout['workout_summary']}</h3>
@@ -375,15 +482,13 @@ elif page == "👤 User Dashboard":
             </div>
         """, unsafe_allow_html=True)
 
-        # Muscle map left, exercise cards right
+        # Muscle map left, exercise grid right
         map_col, cards_col = st.columns([1, 3])
 
         with map_col:
-            # Body diagram — primary muscles vibrant, secondary lighter
             st.pyplot(plot_muscle_map(workout["exercises"], MUSCLE_COLORS))
 
         with cards_col:
-            # Exercise grid — 3 cards per row
             cols = st.columns(3)
             for i, ex in enumerate(workout["exercises"]):
                 is_rejected = ex["name"] in st.session_state.rejected
@@ -393,7 +498,6 @@ elif page == "👤 User Dashboard":
                 with cols[i % 3]:
                     with st.container(border=True):
 
-                        # Coloured header — greyed if rejected, heart if liked
                         if is_rejected:
                             st.markdown(f"""
                                 <div class="exercise-card-header" style="background:#94a3b8">
@@ -412,9 +516,10 @@ elif page == "👤 User Dashboard":
 
                         st.write(f"**{ex['sets']} sets × {ex['reps']} reps**")
                         st.caption(f"🏋️ {ex['equipment'].replace('_', ' ').title()}")
-                        st.caption(f"💡 {ex['notes']}")
+                        # Truncated notes keep all cards the same height
+                        st.caption(f"💡 {truncate(ex['notes'])}")
 
-                        # Undo button if rejected, like + reject buttons otherwise
+                        # Buttons stacked vertically — avoids 3-level column nesting
                         if is_rejected:
                             if st.button("↩️ Undo", key=f"undo_{ex['name']}", use_container_width=True):
                                 st.session_state.rejected.remove(ex["name"])
@@ -422,29 +527,23 @@ elif page == "👤 User Dashboard":
                                     st.session_state.all_rejected.remove(ex["name"])
                                 st.rerun()
                         else:
-                            btn_like, btn_reject = st.columns(2)
-                            with btn_like:
-                                heart_label = "❤️ Liked" if is_liked else "🤍 Like"
-                                if st.button(heart_label, key=f"like_{ex['name']}", use_container_width=True):
-                                    if is_liked:
-                                        st.session_state.all_liked.remove(ex["name"])
-                                    else:
-                                        st.session_state.all_liked.append(ex["name"])
-                                    st.rerun()
-                            with btn_reject:
-                                if st.button("👎 Reject", key=f"reject_{ex['name']}", use_container_width=True):
-                                    st.session_state.rejected.append(ex["name"])
-                                    if ex["name"] not in st.session_state.all_rejected:
-                                        st.session_state.all_rejected.append(ex["name"])
-                                    st.rerun()
+                            heart_label = "❤️ Liked" if is_liked else "🤍 Like"
+                            if st.button(heart_label, key=f"like_{ex['name']}", use_container_width=True):
+                                if is_liked:
+                                    st.session_state.all_liked.remove(ex["name"])
+                                else:
+                                    st.session_state.all_liked.append(ex["name"])
+                                st.rerun()
+                            if st.button("👎 Reject", key=f"reject_{ex['name']}", use_container_width=True):
+                                st.session_state.rejected.append(ex["name"])
+                                if ex["name"] not in st.session_state.all_rejected:
+                                    st.session_state.all_rejected.append(ex["name"])
+                                st.rerun()
 
         st.divider()
 
-        # Regenerate and save buttons — centred
-        col_left, col_mid_1, col_mid_2, col_right = st.columns([1, 2, 2, 1])
-
-        with col_mid_1:
-            # Only show regenerate button when there are pending rejections
+        col_left, col_mid, col_right = st.columns([1, 2, 1])
+        with col_mid:
             if st.session_state.rejected:
                 if st.button("🔄 Regenerate Rejected", type="primary", use_container_width=True):
                     with st.spinner("Swapping out exercises..."):
@@ -456,7 +555,6 @@ elif page == "👤 User Dashboard":
                         st.session_state.rejected = []
                         st.rerun()
 
-        with col_mid_2:
             if st.button("💾 Save Workout", type="primary", use_container_width=True):
                 save_workout(
                     user_id,
