@@ -26,28 +26,7 @@ from workout_generator import (
     generate_exercise_pool
 )
 from muscle_map import plot_muscle_map
-@st.cache_data
-def cached_plot_steps(user_id, name):
-    user_logs = df_logs[df_logs["user_id"] == user_id]
-    return plot_steps_over_time(user_logs, name)
 
-@st.cache_data
-def cached_plot_calories(user_id, name):
-    user_logs = df_logs[df_logs["user_id"] == user_id]
-    return plot_calories_over_time(user_logs, name)
-
-@st.cache_data
-def cached_plot_freq(user_id, name):
-    user_logs = df_logs[df_logs["user_id"] == user_id]
-    return plot_user_workout_frequency(user_logs, name)
-
-@st.cache_data
-def cached_plot_global_calories():
-    return plot_calories_by_workout(df_logs)
-
-@st.cache_data
-def cached_plot_global_freq():
-    return plot_workout_frequency(df_logs)
 
 # Color palette
 
@@ -131,6 +110,30 @@ def get_data():
     return df_users, df_logs
 
 df_users, df_logs = get_data()
+
+
+@st.cache_data
+def cached_plot_steps(user_id, name):
+    user_logs = df_logs[df_logs["user_id"] == user_id]
+    return plot_steps_over_time(user_logs, name)
+
+@st.cache_data
+def cached_plot_calories(user_id, name):
+    user_logs = df_logs[df_logs["user_id"] == user_id]
+    return plot_calories_over_time(user_logs, name)
+
+@st.cache_data
+def cached_plot_freq(user_id, name):
+    user_logs = df_logs[df_logs["user_id"] == user_id]
+    return plot_user_workout_frequency(user_logs, name)
+
+@st.cache_data
+def cached_plot_global_calories():
+    return plot_calories_by_workout(df_logs)
+
+@st.cache_data
+def cached_plot_global_freq():
+    return plot_workout_frequency(df_logs)
 
 
 # Sidebar
@@ -292,158 +295,158 @@ elif page == "👤 User Dashboard":
                                 st.caption(f"💡 {truncate(ex['notes'])}")
 
 
-    # Build Your Own — no st.form, plain buttons only for reliable state management
-    with st.expander("🔨 Build Your Own Workout"):
-        st.caption("Set filters, generate suggestions, add exercises to your selection, adjust sets and reps, then build.")
+    # BYO fragment — clicks inside only rerun this block, not the full page
+    @st.fragment
+    def build_your_own_section(stats: dict, user_id: str):
+        with st.expander("🔨 Build Your Own Workout"):
+            st.caption("Set filters, generate suggestions, add exercises to your selection, adjust sets and reps, then build.")
 
-        # Filters — plain multiselects, no form
-        # Changes cause harmless reruns; nothing happens until Generate is clicked
-        fc1, fc2 = st.columns(2)
-        with fc1:
-            pool_muscles = st.multiselect(
-                "Target muscle groups",
-                options=["chest","back","legs","shoulders","arms","core","cardio"],
-                default=st.session_state.last_pool_muscles,
-                key=f"pool_muscles_{st.session_state.filter_version}"
-            )
-        with fc2:
-            pool_equipment = st.multiselect(
-                "Equipment",
-                options=["bodyweight","dumbbells","barbells","full_gym",
-                         "resistance_bands","kettlebells","elliptical","treadmill","rowing_machine"],
-                default=st.session_state.last_pool_equipment or list(stats["equipment"]),
-                key=f"pool_equipment_{st.session_state.filter_version}"
-            )
+            fc1, fc2 = st.columns(2)
+            with fc1:
+                pool_muscles = st.multiselect(
+                    "Target muscle groups",
+                    options=["chest","back","legs","shoulders","arms","core","cardio"],
+                    default=st.session_state.last_pool_muscles,
+                    key=f"pool_muscles_{st.session_state.filter_version}"
+                )
+            with fc2:
+                pool_equipment = st.multiselect(
+                    "Equipment",
+                    options=["bodyweight","dumbbells","barbells","full_gym",
+                             "resistance_bands","kettlebells","elliptical","treadmill","rowing_machine"],
+                    default=st.session_state.last_pool_equipment or list(stats["equipment"]),
+                    key=f"pool_equipment_{st.session_state.filter_version}"
+                )
 
-        btn1, btn2, btn3 = st.columns([3, 1, 1])
-        with btn1:
-            if st.button("⚡ Generate Suggestions", type="primary", use_container_width=True, key="gen_pool"):
-                st.session_state.last_pool_muscles   = list(pool_muscles)
-                st.session_state.last_pool_equipment = list(pool_equipment)
-                with st.spinner("Generating exercise pool..."):
-                    # Pool refreshes; pool_selected is intentionally preserved
-                    st.session_state.pool = generate_exercise_pool(stats, pool_muscles, pool_equipment)
+            btn1, btn2, btn3 = st.columns([3, 1, 1])
+            with btn1:
+                if st.button("⚡ Generate Suggestions", type="primary", use_container_width=True, key="gen_pool"):
+                    st.session_state.last_pool_muscles   = list(pool_muscles)
+                    st.session_state.last_pool_equipment = list(pool_equipment)
+                    with st.spinner("Generating exercise pool..."):
+                        st.session_state.pool = generate_exercise_pool(stats, pool_muscles, pool_equipment)
 
-        with btn2:
-            if st.button("＋ More", use_container_width=True, key="more_pool",
-                         disabled=not bool(st.session_state.pool)):
-                st.session_state.last_pool_muscles   = list(pool_muscles)
-                st.session_state.last_pool_equipment = list(pool_equipment)
-                with st.spinner("Fetching more..."):
-                    more_pool      = generate_exercise_pool(stats, pool_muscles, pool_equipment, 6)
-                    existing_names = {ex["name"] for ex in st.session_state.pool}
-                    new_ones       = [ex for ex in more_pool if ex["name"] not in existing_names]
-                    st.session_state.pool = st.session_state.pool + new_ones
+            with btn2:
+                if st.button("＋ More", use_container_width=True, key="more_pool",
+                             disabled=not bool(st.session_state.pool)):
+                    st.session_state.last_pool_muscles   = list(pool_muscles)
+                    st.session_state.last_pool_equipment = list(pool_equipment)
+                    with st.spinner("Fetching more..."):
+                        more_pool      = generate_exercise_pool(stats, pool_muscles, pool_equipment, 6)
+                        existing_names = {ex["name"] for ex in st.session_state.pool}
+                        new_ones       = [ex for ex in more_pool if ex["name"] not in existing_names]
+                        st.session_state.pool = st.session_state.pool + new_ones
 
-        with btn3:
-            if st.button("🔄 Clear", use_container_width=True, key="clear_filters_btn"):
-                st.session_state.last_pool_muscles   = []
-                st.session_state.last_pool_equipment = list(stats["equipment"])
-                st.session_state.filter_version     += 1
+            with btn3:
+                if st.button("🔄 Clear", use_container_width=True, key="clear_filters_btn"):
+                    st.session_state.last_pool_muscles   = []
+                    st.session_state.last_pool_equipment = list(stats["equipment"])
+                    st.session_state.filter_version     += 1
+                    st.rerun(scope="fragment")  # resets multiselect keys without full page reload
 
-        # Your Selections — persists across pool regenerations and filter changes
-        sel_count   = len(st.session_state.pool_selected)
-        pool_lookup = {ex["name"]: ex for ex in (st.session_state.pool or [])}
+            sel_count   = len(st.session_state.pool_selected)
+            pool_lookup = {ex["name"]: ex for ex in (st.session_state.pool or [])}
 
-        if sel_count > 0:
-            st.divider()
-            hdr_col, clr_col = st.columns([4, 1])
-            with hdr_col:
-                st.markdown(f"**📋 Your selections ({sel_count} exercises)**")
-            with clr_col:
-                if st.button("Clear All", key="clear_all_sel"):
-                    st.session_state.pool_selected = []
-                    st.session_state.pool_sets     = {}
-                    st.session_state.pool_reps     = {}
+            if sel_count > 0:
+                st.divider()
+                hdr_col, clr_col = st.columns([4, 1])
+                with hdr_col:
+                    st.markdown(f"**📋 Your selections ({sel_count} exercises)**")
+                with clr_col:
+                    if st.button("Clear All", key="clear_all_sel"):
+                        st.session_state.pool_selected = []
+                        st.session_state.pool_sets     = {}
+                        st.session_state.pool_reps     = {}
 
-            for ex_name in list(st.session_state.pool_selected):
-                ex_data = pool_lookup.get(ex_name, {"sets":3,"reps":10,"muscle_group":"varied"})
-                color   = MUSCLE_COLORS.get(ex_data.get("muscle_group","").lower(), ACCENT)
+                for ex_name in list(st.session_state.pool_selected):
+                    ex_data = pool_lookup.get(ex_name, {"sets":3,"reps":10,"muscle_group":"varied"})
+                    color   = MUSCLE_COLORS.get(ex_data.get("muscle_group","").lower(), ACCENT)
 
-                row_name, row_sets, row_reps, row_del = st.columns([4, 1, 1, 1])
-                with row_name:
-                    st.markdown(f"""
-                        <div style="background:{hex_lighten(color,0.88)};border-left:4px solid {color};
-                                    padding:8px 12px;border-radius:4px;font-size:0.85rem;
-                                    font-weight:600;color:#1e293b;margin-bottom:4px;">{ex_name}</div>
-                    """, unsafe_allow_html=True)
-                with row_sets:
-                    sets_val = st.session_state.pool_sets.get(ex_name, ex_data.get("sets", 3))
-                    sets_val = max(1, min(10, int(sets_val)))  # clamp to widget range
-                    sv = st.number_input("Sets", 1, 10, value=sets_val, key=f"sel_sets_{ex_name}")
-                    st.session_state.pool_sets = {**st.session_state.pool_sets, ex_name: sv}
-                with row_reps:
-                    reps_val = st.session_state.pool_reps.get(ex_name, ex_data.get("reps", 10))
-                    reps_val = max(1, min(50, int(reps_val)))  # clamp LLM values to widget range
-                    rv = st.number_input("Reps", 1, 50, value=reps_val, key=f"sel_reps_{ex_name}")
-                    st.session_state.pool_reps = {**st.session_state.pool_reps, ex_name: rv}
-                with row_del:
-                    if st.button("✕", key=f"remove_sel_{ex_name}"):
-                        st.session_state.pool_selected = [x for x in st.session_state.pool_selected if x != ex_name]
-
-            st.divider()
-            workout_name_input = st.text_input(
-                "Give your workout a name",
-                placeholder="e.g. Upper body push, Leg day, Active recovery...",
-                key="custom_workout_name"
-            )
-
-            b_left, b_mid, b_right = st.columns([1, 2, 1])
-            with b_mid:
-                if st.button(f"🏋️ Build Workout  ({sel_count} exercises)", type="primary", use_container_width=True):
-                    selected_exercises = []
-                    for ex_name in st.session_state.pool_selected:
-                        ex_data         = pool_lookup.get(ex_name, {
-                            "name":ex_name,"sets":3,"reps":10,
-                            "muscle_group":"varied","equipment":"bodyweight","notes":"User-selected exercise."
-                        })
-                        ex_copy         = ex_data.copy()
-                        ex_copy["name"] = ex_name
-                        ex_copy["sets"] = st.session_state.pool_sets.get(ex_name, ex_data.get("sets",3))
-                        ex_copy["reps"] = st.session_state.pool_reps.get(ex_name, ex_data.get("reps",10))
-                        selected_exercises.append(ex_copy)
-
-                    summary = workout_name_input.strip() if workout_name_input.strip() else f"Custom workout — {sel_count} exercises"
-                    st.session_state.workout       = {"workout_summary": summary, "exercises": selected_exercises}
-                    st.session_state.rejected      = []
-                    st.session_state.all_rejected  = []
-                    st.session_state.all_liked     = []
-                    st.session_state.pool          = None
-                    st.session_state.pool_selected = []
-                    st.session_state.pool_sets     = {}
-                    st.session_state.pool_reps     = {}
-                    st.rerun()
-
-        # Exercise pool — browse and add
-        if st.session_state.pool:
-            st.divider()
-            st.caption(f"**Exercise pool** — {len(st.session_state.pool)} suggestions · click to add to your selection")
-
-            pool_cols = st.columns(3)
-            for i, ex in enumerate(st.session_state.pool):
-                is_sel       = ex["name"] in st.session_state.pool_selected
-                color        = MUSCLE_COLORS.get(ex["muscle_group"].lower(), ACCENT)
-                header_color = color if is_sel else "#94a3b8"
-
-                with pool_cols[i % 3]:
-                    with st.container(border=True):
+                    row_name, row_sets, row_reps, row_del = st.columns([4, 1, 1, 1])
+                    with row_name:
                         st.markdown(f"""
-                            <div class="exercise-card-header" style="background:{header_color}">
-                                <p class="exercise-name">{'✅ ' if is_sel else ''}{ex['name']}</p>
-                                <span class="muscle-badge">{ex['muscle_group']}</span>
-                            </div>
+                            <div style="background:{hex_lighten(color,0.88)};border-left:4px solid {color};
+                                        padding:8px 12px;border-radius:4px;font-size:0.85rem;
+                                        font-weight:600;color:#1e293b;margin-bottom:4px;">{ex_name}</div>
                         """, unsafe_allow_html=True)
-                        st.caption(f"🏋️ {ex['equipment'].replace('_',' ').title()}")
-                        st.caption(f"💡 {truncate(ex['notes'])}")
+                    with row_sets:
+                        sets_val = st.session_state.pool_sets.get(ex_name, ex_data.get("sets", 3))
+                        sets_val = max(1, min(10, int(sets_val)))
+                        sv = st.number_input("Sets", 1, 10, value=sets_val, key=f"sel_sets_{ex_name}")
+                        st.session_state.pool_sets = {**st.session_state.pool_sets, ex_name: sv}
+                    with row_reps:
+                        reps_val = st.session_state.pool_reps.get(ex_name, ex_data.get("reps", 10))
+                        reps_val = max(1, min(50, int(reps_val)))
+                        rv = st.number_input("Reps", 1, 50, value=reps_val, key=f"sel_reps_{ex_name}")
+                        st.session_state.pool_reps = {**st.session_state.pool_reps, ex_name: rv}
+                    with row_del:
+                        if st.button("✕", key=f"remove_sel_{ex_name}"):
+                            st.session_state.pool_selected = [x for x in st.session_state.pool_selected if x != ex_name]
 
-                        if is_sel:
-                            if st.button("✅ Added", key=f"sel_on_{ex['name']}", use_container_width=True):
-                                st.session_state.pool_selected = [x for x in st.session_state.pool_selected if x != ex["name"]]
-                                st.rerun()
-                        else:
-                            if st.button("＋ Add", key=f"sel_off_{ex['name']}", use_container_width=True):
-                                st.session_state.pool_selected = st.session_state.pool_selected + [ex["name"]]
-                                st.rerun()
+                st.divider()
+                workout_name_input = st.text_input(
+                    "Give your workout a name",
+                    placeholder="e.g. Upper body push, Leg day, Active recovery...",
+                    key="custom_workout_name"
+                )
+
+                b_left, b_mid, b_right = st.columns([1, 2, 1])
+                with b_mid:
+                    if st.button(f"🏋️ Build Workout  ({sel_count} exercises)", type="primary", use_container_width=True):
+                        selected_exercises = []
+                        for ex_name in st.session_state.pool_selected:
+                            ex_data         = pool_lookup.get(ex_name, {
+                                "name":ex_name,"sets":3,"reps":10,
+                                "muscle_group":"varied","equipment":"bodyweight","notes":"User-selected exercise."
+                            })
+                            ex_copy         = ex_data.copy()
+                            ex_copy["name"] = ex_name
+                            ex_copy["sets"] = st.session_state.pool_sets.get(ex_name, ex_data.get("sets",3))
+                            ex_copy["reps"] = st.session_state.pool_reps.get(ex_name, ex_data.get("reps",10))
+                            selected_exercises.append(ex_copy)
+
+                        summary = workout_name_input.strip() if workout_name_input.strip() else f"Custom workout — {sel_count} exercises"
+                        st.session_state.workout       = {"workout_summary": summary, "exercises": selected_exercises}
+                        st.session_state.rejected      = []
+                        st.session_state.all_rejected  = []
+                        st.session_state.all_liked     = []
+                        st.session_state.pool          = None
+                        st.session_state.pool_selected = []
+                        st.session_state.pool_sets     = {}
+                        st.session_state.pool_reps     = {}
+                        st.rerun()  # full rerun so the workout section below renders
+
+            if st.session_state.pool:
+                st.divider()
+                st.caption(f"**Exercise pool** — {len(st.session_state.pool)} suggestions · click to add to your selection")
+
+                pool_cols = st.columns(3)
+                for i, ex in enumerate(st.session_state.pool):
+                    is_sel       = ex["name"] in st.session_state.pool_selected
+                    color        = MUSCLE_COLORS.get(ex["muscle_group"].lower(), ACCENT)
+                    header_color = color if is_sel else "#94a3b8"
+
+                    with pool_cols[i % 3]:
+                        with st.container(border=True):
+                            st.markdown(f"""
+                                <div class="exercise-card-header" style="background:{header_color}">
+                                    <p class="exercise-name">{'✅ ' if is_sel else ''}{ex['name']}</p>
+                                    <span class="muscle-badge">{ex['muscle_group']}</span>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            st.caption(f"🏋️ {ex['equipment'].replace('_',' ').title()}")
+                            st.caption(f"💡 {truncate(ex['notes'])}")
+
+                            if is_sel:
+                                if st.button("✅ Added", key=f"sel_on_{ex['name']}", use_container_width=True):
+                                    st.session_state.pool_selected = [x for x in st.session_state.pool_selected if x != ex["name"]]
+                                    st.rerun(scope="fragment")
+                            else:
+                                if st.button("＋ Add", key=f"sel_off_{ex['name']}", use_container_width=True):
+                                    st.session_state.pool_selected = st.session_state.pool_selected + [ex["name"]]
+                                    st.rerun(scope="fragment")
+
+    build_your_own_section(stats, user_id)
 
 
     # Liked exercises

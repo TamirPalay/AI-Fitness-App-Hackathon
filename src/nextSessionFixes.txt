@@ -3,7 +3,7 @@ but the text also gets cut off.
 
 Custom workouts reloads on every click- quite annoying.
 If you reload the filters or add more exercises, the added exercises lose their colour tag- no biggie
-
+Also, the sets and reps blocks are not lined up with the exercise name
 add some background colour and general UI improvements
 
 Colour map needs some improvement- varied workouts just don't appear. More colours for accurate muscles
@@ -14,4 +14,4 @@ Ability for a user to edit their details like available equipment etc?
 
 Choose a colour scheme and work on UI.
 
-Ability to simulate more sessions per user
+Ability to simulate more sessions per user?
