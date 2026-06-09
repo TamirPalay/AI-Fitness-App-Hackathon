@@ -204,6 +204,55 @@ Respond ONLY with a JSON object containing ALL {total} exercises, no extra text:
 """
     return prompt
 
+def generate_exercise_pool(user_stats: dict, muscle_groups: list, equipment: list, num_exercises: int = 12) -> list:
+    """Generates a browseable pool of exercises for the user to pick from."""
+    disliked = user_stats.get("disliked_exercises", [])
+    if isinstance(disliked, str):
+        disliked = ast.literal_eval(disliked)
+
+    muscle_str = ", ".join(muscle_groups) if muscle_groups else "any muscle group"
+    equip_str  = ", ".join(equipment)    if equipment    else "bodyweight only"
+
+    prompt = f"""
+You are a personal fitness coach generating a varied exercise pool for a user to browse.
+
+User Profile:
+- Goal: {user_stats['goal']}
+- Fitness level: {user_stats['fitness_level']}
+- Has injuries: {user_stats['has_injuries']}
+
+Filters:
+- Target muscle groups: {muscle_str}
+- Equipment available: {equip_str}
+- Do NOT include: {', '.join(disliked) if disliked else 'None'}
+
+Generate EXACTLY {num_exercises} exercises.
+Ensure variety — different movement patterns, difficulty levels, and muscle emphasis.
+Do NOT repeat any exercise.
+
+Respond ONLY with a JSON array, no extra text:
+[
+  {{
+    "name": "exercise name",
+    "sets": 3,
+    "reps": 10,
+    "equipment": "equipment used",
+    "muscle_group": "primary muscle group",
+    "notes": "short coaching tip"
+  }}
+]
+"""
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.8
+    )
+    raw = response.choices[0].message.content.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    return json.loads(raw)
 
 def build_replacement_prompt(user_stats: dict, last_7_days, rejected_exercises: list, kept_exercises: list, num_replacements: int) -> str:
     disliked = user_stats.get("disliked_exercises", [])
