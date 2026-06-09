@@ -28,8 +28,6 @@ from workout_generator import (
 from muscle_map import plot_muscle_map
 
 
-# Color palette
-
 ACCENT = "#0e7490"
 
 MUSCLE_COLORS = {
@@ -47,8 +45,6 @@ MUSCLE_COLORS = {
 PILL_COLORS = ["#ef4444","#3b82f6","#22c55e","#f97316","#a855f7","#14b8a6","#eab308"]
 
 
-# Helpers
-
 def truncate(text: str, limit: int = 72) -> str:
     return text[:limit] + "…" if len(text) > limit else text
 
@@ -59,40 +55,151 @@ def hex_lighten(hex_color: str, factor: float = 0.88) -> str:
     return f"#{int(r+(255-r)*factor):02x}{int(g+(255-g)*factor):02x}{int(b+(255-b)*factor):02x}"
 
 
-# CSS
-
 def inject_css():
     st.markdown("""
         <style>
         html, body, [class*="css"] { font-family: 'Segoe UI', sans-serif; }
 
+        /* Metric cards */
         div[data-testid="metric-container"] {
-            background-color:#f8fafc; border:1px solid #e2e8f0;
-            border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.06);
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
-        div[data-testid="stButton"] > button[kind="primary"] {
-            background-color:#0e7490; border:none; border-radius:8px;
-            font-weight:600; letter-spacing:0.3px;
+        div[data-testid="metric-container"] label {
+            font-size: 0.78rem;
+            color: #0e7490;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
-        div[data-testid="stButton"] > button[kind="primary"]:hover { background-color:#0c6480; }
-        div[data-testid="stButton"] > button { border-radius:8px; font-size:0.9rem; }
-        section[data-testid="stSidebar"] { background-color:#f1f5f9; }
+        div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
 
-        .exercise-card-header { padding:10px 12px 8px 12px; border-radius:10px 10px 0 0; margin-bottom:8px; }
-        .exercise-name { font-size:1rem; font-weight:700; color:white; margin:0 0 4px 0; }
+        /* Primary buttons */
+        div[data-testid="stButton"] > button[kind="primary"] {
+            background-color: #0e7490;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        div[data-testid="stButton"] > button[kind="primary"]:hover { background-color: #0c6480; }
+        div[data-testid="stButton"] > button { border-radius: 8px; font-size: 0.9rem; }
+
+        /* Sidebar */
+        section[data-testid="stSidebar"] { background-color: #f0f9ff; }
+        section[data-testid="stSidebar"] h1 { color: #0e7490; }
+
+        /* Exercise card header */
+        .exercise-card-header {
+            padding: 10px 12px 8px 12px;
+            border-radius: 10px 10px 0 0;
+            margin-bottom: 8px;
+            min-height: 64px;                  /* uniform header height across row */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .exercise-name {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: white;
+            margin: 0 0 4px 0;
+            line-height: 1.25;
+            /* clamp to 2 lines so long names don't expand the card */
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
         .muscle-badge {
-            display:inline-block; background:rgba(255,255,255,0.25); color:white;
-            font-size:0.7rem; font-weight:600; padding:2px 8px;
-            border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;
+            display: inline-block;
+            background: rgba(255,255,255,0.25);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
         }
+
+        /* Workout banner */
         .workout-banner {
-            background:linear-gradient(135deg,#0e7490,#0891b2);
-            color:white; padding:18px 24px; border-radius:12px; margin-bottom:20px;
+            background: linear-gradient(135deg, #0e7490, #0891b2);
+            color: white;
+            padding: 18px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
         }
-        .workout-banner h3 { margin:0 0 4px 0; font-size:1.1rem; font-weight:700; }
-        .workout-banner p  { margin:0; font-size:0.9rem; opacity:0.85; }
+        .workout-banner h3 { margin: 0 0 4px 0; font-size: 1.1rem; font-weight: 700; }
+        .workout-banner p  { margin: 0; font-size: 0.9rem; opacity: 0.85; }
+
+        /* Section cards — wraps profile/activity/progress blocks */
+        .section-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 14px 0;
+        }
+
+        /* BYO selection row — compact number inputs with no label gap */
+        .sel-row-header {
+            display: grid;
+            grid-template-columns: 4fr 1fr 1fr 0.6fr;
+            gap: 8px;
+            padding: 0 4px;
+            margin-bottom: 4px;
+        }
+        .sel-col-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        /* Hide number input labels (we show them once in the header row) */
+        div[data-testid="stNumberInput"] label { display: none; }
+
+        /* Shrink number input height */
+        div[data-testid="stNumberInput"] input {
+            padding: 4px 8px;
+            font-size: 0.85rem;
+            height: 34px;
+        }
+
+        /* Notes caption consistent height — clamp to 2 lines */
+        .card-notes {
+            font-size: 0.78rem;
+            color: #475569;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.2em;
+        }
+
         div[data-testid="stVerticalBlockBorderWrapper"] {
-            height:100%; display:flex; flex-direction:column; justify-content:space-between;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -186,7 +293,9 @@ elif page == "👤 User Dashboard":
     st.caption(f"User {user_id}  ·  {stats['goal'].replace('_',' ').title()}  ·  {stats['fitness_level'].title()}")
     st.divider()
 
-    st.subheader("Profile")
+    # Profile section card
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">👤 Profile</p>', unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("🎂 Age",           stats["age"])
     col2.metric("🎯 Goal",          stats["goal"].replace("_"," ").title())
@@ -205,28 +314,30 @@ elif page == "👤 User Dashboard":
         st.warning("⚠️ This user has recorded injuries — the workout generator will account for these.")
         for inj in injuries:
             st.caption(f"🩹 **{inj['body_part'].replace('_',' ').title()}** — {inj['severity'].replace('_',' ').title()}: {inj['notes']}")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.divider()
-
-    st.subheader("📊 Activity Summary")
+    # Activity summary section card
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">📊 Activity Summary</p>', unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("🚶 Avg Daily Steps",      f"{stats['avg_daily_steps']:,}")
     col2.metric("🔥 Avg Daily Calories",   f"{stats['avg_daily_calories']} kcal")
     col3.metric("⏱️ Avg Workout Duration", f"{stats['avg_workout_duration']} min")
     col4.metric("🏆 Favourite Workout",    stats["favourite_workout"])
-    st.divider()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.subheader("📈 Progress Over Time")
+    # Progress charts section card
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<p class="section-title">📈 Progress Over Time</p>', unsafe_allow_html=True)
     chart_col1, chart_col2 = st.columns(2)
     with chart_col1: st.pyplot(cached_plot_steps(user_id, stats["name"]))
     with chart_col2: st.pyplot(cached_plot_calories(user_id, stats["name"]))
     freq_left, freq_mid, freq_right = st.columns([1, 2, 1])
     with freq_mid: st.pyplot(cached_plot_freq(user_id, stats["name"]))
-    st.divider()
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.subheader("⚡ Today's Workout")
 
-    # Session state — all list updates use reassignment to avoid Streamlit mutation detection issues
     for key, default in [
         ("workout",            None),
         ("rejected",           []),
@@ -292,10 +403,10 @@ elif page == "👤 User Dashboard":
                                 """, unsafe_allow_html=True)
                                 st.write(f"**{ex['sets']} sets × {ex['reps']} reps**")
                                 st.caption(f"🏋️ {ex['equipment'].replace('_',' ').title()}")
-                                st.caption(f"💡 {truncate(ex['notes'])}")
+                                st.markdown(f'<p class="card-notes">💡 {truncate(ex["notes"])}</p>', unsafe_allow_html=True)
 
 
-    # BYO fragment — clicks inside only rerun this block, not the full page
+    # BYO fragment
     @st.fragment
     def build_your_own_section(stats: dict, user_id: str):
         with st.expander("🔨 Build Your Own Workout"):
@@ -342,16 +453,24 @@ elif page == "👤 User Dashboard":
                     st.session_state.last_pool_muscles   = []
                     st.session_state.last_pool_equipment = list(stats["equipment"])
                     st.session_state.filter_version     += 1
-                    st.rerun(scope="fragment")  # resets multiselect keys without full page reload
+                    st.rerun(scope="fragment")
 
             sel_count   = len(st.session_state.pool_selected)
             pool_lookup = {ex["name"]: ex for ex in (st.session_state.pool or [])}
 
             if sel_count > 0:
                 st.divider()
+                # Single header row — labels appear once above the list, not per row
+                st.markdown("""
+                    <div class="sel-row-header">
+                        <span class="sel-col-label">Exercise</span>
+                        <span class="sel-col-label">Sets</span>
+                        <span class="sel-col-label">Reps</span>
+                        <span class="sel-col-label"></span>
+                    </div>
+                """, unsafe_allow_html=True)
+
                 hdr_col, clr_col = st.columns([4, 1])
-                with hdr_col:
-                    st.markdown(f"**📋 Your selections ({sel_count} exercises)**")
                 with clr_col:
                     if st.button("Clear All", key="clear_all_sel"):
                         st.session_state.pool_selected = []
@@ -362,25 +481,31 @@ elif page == "👤 User Dashboard":
                     ex_data = pool_lookup.get(ex_name, {"sets":3,"reps":10,"muscle_group":"varied"})
                     color   = MUSCLE_COLORS.get(ex_data.get("muscle_group","").lower(), ACCENT)
 
-                    row_name, row_sets, row_reps, row_del = st.columns([4, 1, 1, 1])
+                    row_name, row_sets, row_reps, row_del = st.columns([4, 1, 1, 0.6])
                     with row_name:
                         st.markdown(f"""
                             <div style="background:{hex_lighten(color,0.88)};border-left:4px solid {color};
-                                        padding:8px 12px;border-radius:4px;font-size:0.85rem;
-                                        font-weight:600;color:#1e293b;margin-bottom:4px;">{ex_name}</div>
+                                        padding:6px 12px;border-radius:4px;font-size:0.85rem;
+                                        font-weight:600;color:#1e293b;height:34px;
+                                        display:flex;align-items:center;">{ex_name}</div>
                         """, unsafe_allow_html=True)
                     with row_sets:
                         sets_val = st.session_state.pool_sets.get(ex_name, ex_data.get("sets", 3))
                         sets_val = max(1, min(10, int(sets_val)))
-                        sv = st.number_input("Sets", 1, 10, value=sets_val, key=f"sel_sets_{ex_name}")
+                        # label_visibility="collapsed" removes the label so input aligns with name bar
+                        sv = st.number_input("Sets", 1, 10, value=sets_val,
+                                             key=f"sel_sets_{ex_name}",
+                                             label_visibility="collapsed")
                         st.session_state.pool_sets = {**st.session_state.pool_sets, ex_name: sv}
                     with row_reps:
                         reps_val = st.session_state.pool_reps.get(ex_name, ex_data.get("reps", 10))
                         reps_val = max(1, min(50, int(reps_val)))
-                        rv = st.number_input("Reps", 1, 50, value=reps_val, key=f"sel_reps_{ex_name}")
+                        rv = st.number_input("Reps", 1, 50, value=reps_val,
+                                             key=f"sel_reps_{ex_name}",
+                                             label_visibility="collapsed")
                         st.session_state.pool_reps = {**st.session_state.pool_reps, ex_name: rv}
                     with row_del:
-                        if st.button("✕", key=f"remove_sel_{ex_name}"):
+                        if st.button("✕", key=f"remove_sel_{ex_name}", use_container_width=True):
                             st.session_state.pool_selected = [x for x in st.session_state.pool_selected if x != ex_name]
 
                 st.divider()
@@ -414,7 +539,7 @@ elif page == "👤 User Dashboard":
                         st.session_state.pool_selected = []
                         st.session_state.pool_sets     = {}
                         st.session_state.pool_reps     = {}
-                        st.rerun()  # full rerun so the workout section below renders
+                        st.rerun()
 
             if st.session_state.pool:
                 st.divider()
@@ -435,7 +560,7 @@ elif page == "👤 User Dashboard":
                                 </div>
                             """, unsafe_allow_html=True)
                             st.caption(f"🏋️ {ex['equipment'].replace('_',' ').title()}")
-                            st.caption(f"💡 {truncate(ex['notes'])}")
+                            st.markdown(f'<p class="card-notes">💡 {truncate(ex["notes"])}</p>', unsafe_allow_html=True)
 
                             if is_sel:
                                 if st.button("✅ Added", key=f"sel_on_{ex['name']}", use_container_width=True):
@@ -553,7 +678,7 @@ elif page == "👤 User Dashboard":
 
                         st.write(f"**{ex['sets']} sets × {ex['reps']} reps**")
                         st.caption(f"🏋️ {ex['equipment'].replace('_',' ').title()}")
-                        st.caption(f"💡 {truncate(ex['notes'])}")
+                        st.markdown(f'<p class="card-notes">💡 {truncate(ex["notes"])}</p>', unsafe_allow_html=True)
 
                         if is_rejected:
                             if st.button("↩️ Undo", key=f"undo_{ex['name']}", use_container_width=True):
